@@ -1,56 +1,69 @@
 ﻿
-/**
- * @classdesc - The {@link WindowSubclassController} class object can be used to implement event handlers
- * for any window created by the AHK process. Creating a window subclass allows your code to
- * intercept the messages sent to the window before the window receives them.
- *
- * The static property "collection" ({@link WindowSubclassController.collection}) is a `Map` where
- * each item key is a window handle (hwnd) and each item value is a {@link WindowSubclassController}
- * object.
- *
- * When your code calls one of the below methods, if an item **does not** exist in the
- * {@link WindowSubclassController.collection} map for the window, a new
- * {@link WindowSubclassController} object is created.
- *
- * - {@link WindowSubclassController.CommandAdd}
- * - {@link WindowSubclassController.MessageAdd}
- * - {@link WindowSubclassController.NotifyAdd}
- *
- * If an item **does** exist in the {@link WindowSubclassController.collection} map, then the function
- * is added to the {@link WindowSubclassController} internal collections.
- *
- * The {@link WindowSubclassController} instance object has the following properties:
- *
- * - {@link WindowSubclassController#commandCollection} - A `Map` object where the item keys are a
- *   WM_COMMAND code, and the item values are an array of functions that will be called when the
- *   window is sent that code.
- * - {@link WindowSubclassController#messageCollection} - A `Map` object where the item keys are a
- *   window message constant, and the item values are an array of functions that will be called when
- *   the window is sent that message.
- * - {@link WindowSubclassController#notifyCollection} - A `Map` object where the item keys are a
- *   WM_NOTIFY code, and the item values are an array of functions that will be called when the
- *   window is sent that code.
- *
- * When the first function is added to one of the {@link WindowSubclassController} object's collections,
- * the window subclass is installed. By default, the function
- * {@link WindowSubclassController_SubclassProc} is used as the SUBCLASSPROC.
- *
- * When the window associated with a {@link WindowSubclassController} object receives a message,
- * if the message matches one of the items in the {@link WindowSubclassController} object's collections,
- * the functions are called.
- */
-class WindowSubclassController {
-    static __New() {
-        this.DeleteProp('__New')
+class WindowSubclassManager {
+    /**
+     * @desc - The {@link WindowSubclassManager} class object can be used to implement event handlers
+     * for any window created by the AHK process. Creating a window subclass allows your code to
+     * intercept the messages sent to the window before the window receives them.
+     *
+     * The property {@link WindowSubclassManager#collection} is a `Map` where
+     * each item key is a window handle (hwnd) and each item value is a {@link WindowSubclassController}
+     * object.
+     *
+     * When your code calls one of the below methods, if an item **does not** exist in the
+     * {@link WindowSubclassManager#collection} map for the window, a new
+     * {@link WindowSubclassController} object is created.
+     *
+     * - {@link WindowSubclassManager.Prototype.CommandAdd}
+     * - {@link WindowSubclassManager.Prototype.MessageAdd}
+     * - {@link WindowSubclassManager.Prototype.NotifyAdd}
+     *
+     * If an item **does** exist in the {@link WindowSubclassManager#collection} map, then the function
+     * is added to the {@link WindowSubclassController} internal collections.
+     *
+     * The {@link WindowSubclassController} instance object has the following properties:
+     *
+     * - {@link WindowSubclassController#commandCollection} - A `Map` object where the item keys are a
+     *   WM_COMMAND code, and the item values are an array of functions that will be called when the
+     *   window is sent that code.
+     * - {@link WindowSubclassController#messageCollection} - A `Map` object where the item keys are a
+     *   window message constant, and the item values are an array of functions that will be called when
+     *   the window is sent that message.
+     * - {@link WindowSubclassController#notifyCollection} - A `Map` object where the item keys are a
+     *   WM_NOTIFY code, and the item values are an array of functions that will be called when the
+     *   window is sent that code.
+     *
+     * When the first function is added to one of the {@link WindowSubclassController} object's collections,
+     * the window subclass is installed. By default, the function
+     * {@link WindowSubclassController_SubclassProc} is used as the SUBCLASSPROC.
+     *
+     * When the window associated with a {@link WindowSubclassController} object receives a message,
+     * if the message matches one of the items in the {@link WindowSubclassController} object's collections,
+     * the functions are called.
+     *
+     * @param {*} [subclassProc = WindowSubclassController_SubclassProc] - The value that is passed
+     * to the `subclassProc` parameter of
+     * {@link WindowSubclassController.Prototype.__New} whenever a new
+     * {@link WindowSubclassController} object is created by calling one of:
+     *
+     * - {@link WindowSubclassManager.Prototype.CommandAdd}
+     * - {@link WindowSubclassManager.Prototype.MessageAdd}
+     * - {@link WindowSubclassManager.Prototype.NotifyAdd}
+     *
+     * @param {String} [callbackCreateOptions = ""] - The value that is passed to the
+     * `callbackCreateOptions` parameter of
+     * {@link WindowSubclassController.Prototype.__New} whenever a new
+     * {@link WindowSubclassController} object is created by calling one of:
+     *
+     * - {@link WindowSubclassManager.Prototype.CommandAdd}
+     * - {@link WindowSubclassManager.Prototype.MessageAdd}
+     * - {@link WindowSubclassManager.Prototype.NotifyAdd}
+     */
+    __New(subclassProc := WindowSubclassController_SubclassProc, callbackCreateOptions := '') {
         this.collection := Map()
-        this.ids := Map()
-        this.collection.default :=
-        this.ids.Default := ''
+        this.collection.default := ''
         this.callbackCreateOptions := ''
-        this.subclassProc := WindowSubclassController_SubclassProc
-        proto := this.Prototype
-        proto.windowSubclass := proto.flag_callbackFree := proto.pfnSubclass := 0
-        global g_windowSubclass_nmhdr_code_offset := A_PtrSize * 2
+        this.subclassProc := subclassProc
+        this.callbackCreateOptions := callbackCreateOptions
     }
     /**
      * @desc - Adds a function to be called when the specified WM_COMMAND is sent to the window
@@ -92,7 +105,7 @@ class WindowSubclassController {
      *
      * @returns {Integer} - The index at which the function was inserted.
      */
-    static CommandAdd(hwndSubclass, CommandCode, Callback, InsertAt?) {
+    CommandAdd(hwndSubclass, CommandCode, Callback, InsertAt?) {
         if !(subclassController := this.collection.Get(hwndSubclass)) {
             this.collection.Set(hwndSubclass, subclassController := WindowSubclassController(hwndSubclass, , this.callbackCreateOptions, this.subclassProc))
             subclassController.MessageAdd(0x0082, WindowSubclassController_OnNCDestroy) ; WM_NCDESTROY
@@ -118,7 +131,7 @@ class WindowSubclassController {
      * - {@link WindowSubclassController#messageCollection}
      * - {@link WindowSubclassController#notifyCollection}
      */
-    static CommandDelete(hwndSubclass, CommandCode, Callback?) {
+    CommandDelete(hwndSubclass, CommandCode, Callback?) {
         if subclassController := this.collection.Get(hwndSubclass) {
             count := subclassController.CommandDelete(CommandCode, Callback?)
             if count = 1
@@ -174,7 +187,7 @@ class WindowSubclassController {
      *
      * @returns {Integer} - The index at which the function was inserted.
      */
-    static MessageAdd(hwndSubclass, MessageCode, Callback, InsertAt?) {
+    MessageAdd(hwndSubclass, MessageCode, Callback, InsertAt?) {
         if !(subclassController := this.collection.Get(hwndSubclass)) {
             this.collection.Set(hwndSubclass, subclassController := WindowSubclassController(hwndSubclass, , this.callbackCreateOptions, this.subclassProc))
             subclassController.MessageAdd(0x0082, WindowSubclassController_OnNCDestroy) ; WM_NCDESTROY
@@ -200,7 +213,7 @@ class WindowSubclassController {
      * - {@link WindowSubclassController#messageCollection}
      * - {@link WindowSubclassController#notifyCollection}
      */
-    static MessageDelete(hwndSubclass, MessageCode, Callback?) {
+    MessageDelete(hwndSubclass, MessageCode, Callback?) {
         if subclassController := this.collection.Get(hwndSubclass) {
             count := subclassController.MessageDelete(MessageCode, Callback?)
             if count = 1
@@ -257,7 +270,7 @@ class WindowSubclassController {
      *
      * @returns {Integer} - The index at which the function was inserted.
      */
-    static NotifyAdd(hwndSubclass, NotifyCode, Callback, InsertAt?) {
+    NotifyAdd(hwndSubclass, NotifyCode, Callback, InsertAt?) {
         if !(subclassController := this.collection.Get(hwndSubclass)) {
             this.collection.Set(hwndSubclass, subclassController := WindowSubclassController(hwndSubclass, , this.callbackCreateOptions, this.subclassProc))
             subclassController.MessageAdd(0x0082, WindowSubclassController_OnNCDestroy) ; WM_NCDESTROY
@@ -283,7 +296,7 @@ class WindowSubclassController {
      * - {@link WindowSubclassController#messageCollection}
      * - {@link WindowSubclassController#notifyCollection}
      */
-    static NotifyDelete(hwndSubclass, NotifyCode, Callback?) {
+    NotifyDelete(hwndSubclass, NotifyCode, Callback?) {
         if subclassController := this.collection.Get(hwndSubclass) {
             count := subclassController.NotifyDelete(NotifyCode, Callback?)
             if count = 1
@@ -304,13 +317,13 @@ class WindowSubclassController {
      * {@link WindowSubclassController.Prototype.__New} whenever a new
      * {@link WindowSubclassController} object is created by calling one of:
      *
-     * - {@link WindowSubclassController.CommandAdd}
-     * - {@link WindowSubclassController.MessageAdd}
-     * - {@link WindowSubclassController.NotifyAdd}
+     * - {@link WindowSubclassManager.Prototype.CommandAdd}
+     * - {@link WindowSubclassManager.Prototype.MessageAdd}
+     * - {@link WindowSubclassManager.Prototype.NotifyAdd}
      *
      * @param {String} value - The value.
      */
-    static SetCallbackCreateOptions(value) {
+    SetCallbackCreateOptions(value) {
         this.callbackCreateOptions := value
     }
     /**
@@ -324,7 +337,7 @@ class WindowSubclassController {
      *
      * @param {*} value - The item's value.
      */
-    static SetData(hwndSubclass, key, value) {
+    SetData(hwndSubclass, key, value) {
         if subclassController := this.collection.Get(hwndSubclass) {
             subclassController.data.Set(key, value)
         } else {
@@ -336,14 +349,25 @@ class WindowSubclassController {
      * {@link WindowSubclassController.Prototype.__New} whenever a new
      * {@link WindowSubclassController} object is created by calling one of:
      *
-     * - {@link WindowSubclassController.CommandAdd}
-     * - {@link WindowSubclassController.MessageAdd}
-     * - {@link WindowSubclassController.NotifyAdd}
+     * - {@link WindowSubclassManager.Prototype.CommandAdd}
+     * - {@link WindowSubclassManager.Prototype.MessageAdd}
+     * - {@link WindowSubclassManager.Prototype.NotifyAdd}
      *
      * @param {*} subclassProc - The function.
      */
-    static SetSubclassProc(subclassProc) {
+    SetSubclassProc(subclassProc) {
         this.subclassProc := subclassProc
+    }
+}
+
+class WindowSubclassController {
+    static __New() {
+        this.DeleteProp('__New')
+        this.ids := Map()
+        this.ids.Default := ''
+        proto := this.Prototype
+        proto.windowSubclass := proto.flag_callbackFree := proto.pfnSubclass := 0
+        global g_windowSubclass_nmhdr_code_offset := A_PtrSize * 2
     }
     /**
      * @desc - A {@link WindowSubclassController} is a tool to organize a window subclass using

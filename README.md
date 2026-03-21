@@ -1,7 +1,7 @@
 # AutoHotkey-WindowSubclassController
 An AutoHotkey (AHK) library with tools for subclassing windows and intercepting window messages.
 
-The `WindowSubclassController` class object can be used to implement event handlers
+The `WindowSubclassManager` and `WindowSubclassController` classes can be used to implement event handlers
 for any window created by the AHK process. Subclassing a window allows your code to
 intercept the messages sent to the window before the window receives them.
 
@@ -11,20 +11,17 @@ For details about the Windows API, see:
 - [Subclassing Controls](https://learn.microsoft.com/en-us/windows/win32/controls/subclassing-overview#subclassing-controls-using-comctl32dll-version-6) - An overview of subclassing controls.
 - [SUBCLASSPROC](https://learn.microsoft.com/en-us/windows/win32/api/commctrl/nc-commctrl-subclassproc) - The function prototype for the function that receives the window messages.
 
-The static property "collection" (`WindowSubclassController.collection`) is a `Map` where
+The property "collection" of the `WindowSubclassManager` instance object is a `Map` where
 each item key is a window handle (hwnd) and each item value is a `WindowSubclassController`
 object.
 
-When your code calls one of the below methods, if an item **does not** exist in the
-`WindowSubclassController.collection` map, a new
-`WindowSubclassController` object is created.
+When your code calls one of the below methods, if an item **does not** exist in the map, a new
+`WindowSubclassController` object is created. If an item **does** exist in the map, then the function
+is added to one of the `WindowSubclassController` internal collections.
 
-- `WindowSubclassController.CommandAdd`
-- `WindowSubclassController.MessageAdd`
-- `WindowSubclassController.NotifyAdd`
-
-If an item **does** exist in the `WindowSubclassController.collection` map, then the function
-is added to the `WindowSubclassController` internal collections.
+- `WindowSubclassManager.Prototype.CommandAdd`
+- `WindowSubclassManager.Prototype.MessageAdd`
+- `WindowSubclassManager.Prototype.NotifyAdd`
 
 The `WindowSubclassController` instance object has the following properties:
 
@@ -133,6 +130,9 @@ these messages, we are able to respond to them before the default window procedu
 #include <WindowSubclassController>
 #include <Rect>
 
+; Create a `WindowSubclassManager` object
+subclassManager := WindowSubclassManager()
+
 g := gui()
 g.SetFont('s11 q5')
 
@@ -145,10 +145,10 @@ items := StrSplit(GetSystemFonts(), '`n', '`s')
 lf := Logfont()
 
 ; Add an event handler for the message WM_DRAWITEM
-WindowSubclassController.MessageAdd(g.hwnd,0x002B, DrawItem) ; WM_DRAWITEM
+subclassManager.MessageAdd(g.hwnd,0x002B, DrawItem) ; WM_DRAWITEM
 
 ; Add an event handler for the message WM_MEASUREITEM
-WindowSubclassController.MessageAdd(g.hwnd,0x002C, MeasureItem) ; WM_MEASUREITEM
+subclassManager.MessageAdd(g.hwnd,0x002C, MeasureItem) ; WM_MEASUREITEM
 
 ; Create the combo box
 CBS_OWNERDRAWFIXED := '0x0010'
