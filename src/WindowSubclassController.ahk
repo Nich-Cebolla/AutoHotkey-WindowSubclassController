@@ -46,7 +46,7 @@ class WindowSubclassController {
         this.ids := Map()
         this.collection.default :=
         this.ids.Default := ''
-        this.callbackCreateOptions := 'F'
+        this.callbackCreateOptions := ''
         this.subclassProc := WindowSubclassController_SubclassProc
         proto := this.Prototype
         proto.windowSubclass := proto.flag_callbackFree := proto.pfnSubclass := 0
@@ -414,7 +414,7 @@ class WindowSubclassController {
      * a random number is generated. To avoid using the same id more than once, this library tracks
      * `uIdSubclass` values using the map object {@link WindowSubclassController.ids}.
      *
-     * @param {String} [callbackCreateOptions = "F"] - The value to pass to the `Options` parameter
+     * @param {String} [callbackCreateOptions = ""] - The value to pass to the `Options` parameter
      * of {@link https://www.autohotkey.com/docs/v2/lib/CallbackCreate.htm CallbackCreate}.
      *
      * @param {*} [subclassProc = WindowSubclassController_SubclassProc] - The function that will be
@@ -434,7 +434,7 @@ class WindowSubclassController {
      *
      * @throws {Error} - "The `uIdSubclass` is already in use."
      */
-    __New(hwndSubclass, uIdSubclass?, callbackCreateOptions := "F", subclassProc := WindowSubclassController_SubclassProc, suppressUniqueIdError := false) {
+    __New(hwndSubclass, uIdSubclass?, callbackCreateOptions := '', subclassProc := WindowSubclassController_SubclassProc, suppressUniqueIdError := false) {
         if IsSet(uIdSubclass) {
             if WindowSubclassController.ids.Has(uIdSubclass) {
                 if suppressUniqueIdError {
@@ -780,8 +780,8 @@ class WindowSubclass {
      * pointer to the function.
      *
      * If `SubclassProc` is a function object, it is passed to
-     * {@link https://www.autohotkey.com/docs/v2/lib/CallbackCreate.htm CallbackCreate}, passing
-     * option "F" to the "Options" parameter.
+     * {@link https://www.autohotkey.com/docs/v2/lib/CallbackCreate.htm CallbackCreate} with no
+     * options.
      *
      * See {@link https://learn.microsoft.com/en-us/windows/win32/api/commctrl/nc-commctrl-subclassproc}
      * for details.
@@ -808,7 +808,7 @@ class WindowSubclass {
             this.dwRefData := dwRefData
         }
         if IsObject(SubclassProc) {
-            this.pfnSubclass := CallbackCreate(SubclassProc, 'F')
+            this.pfnSubclass := CallbackCreate(SubclassProc)
             this.__flag_callbackFree := true
         } else {
             this.pfnSubclass := SubclassProc
