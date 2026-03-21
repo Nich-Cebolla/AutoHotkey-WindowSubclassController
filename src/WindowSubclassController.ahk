@@ -49,7 +49,7 @@ class WindowSubclassController {
         this.callbackCreateOptions := 'F'
         this.subclassProc := WindowSubclassController_SubclassProc
         proto := this.Prototype
-        proto.windowSubclass := 0
+        proto.windowSubclass := proto.flag_callbackFree := proto.pfnSubclass := 0
         global g_windowSubclass_nmhdr_code_offset := A_PtrSize * 2
     }
     /**
@@ -457,6 +457,7 @@ class WindowSubclassController {
         }
         if IsObject(subclassProc) {
             this.pfnSubclass := CallbackCreate(subclassProc, callbackCreateOptions)
+            this.flag_callbackFree := 1
         } else {
             this.pfnSubclass := subclassProc
         }
@@ -740,7 +741,7 @@ class WindowSubclassController {
             }
             this.windowSubclass.Uninstall()
         }
-        if this.HasOwnProp('pfnSubclass') {
+        if this.flag_callbackFree && this.pfnSubclass {
             CallbackFree(this.pfnSubclass)
         }
     }
