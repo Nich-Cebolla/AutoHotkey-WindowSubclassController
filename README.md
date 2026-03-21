@@ -55,7 +55,7 @@ This is `WindowSubclassController_SubclassProc`:
  *
  * @param {Integer} hwndSubclass - The handle to the subclassed window (the handle passed to `SetWindowSubclass`).
  *
- * @param {Integer} uMsg - The message being passed.
+ * @param {Integer} uMsg - The message being processed.
  *
  * @param {Integer} wParam - Additional message information. The contents of this parameter depend on the value of uMsg.
  *
