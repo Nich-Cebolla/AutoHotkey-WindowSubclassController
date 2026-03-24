@@ -1,4 +1,5 @@
-﻿#Requires AutoHotkey >=2.0-a
+﻿
+#Requires AutoHotkey >=2.0-a
 #SingleInstance force
 ; https://github.com/Nich-Cebolla/AutoHotkey-Logfont/blob/main/src/Logfont.ahk
 #include <Logfont>
