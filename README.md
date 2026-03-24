@@ -15,13 +15,9 @@ The property "collection" of the `WindowSubclassManager` instance object is a `M
 each item key is a window handle (hwnd) and each item value is a `WindowSubclassController`
 object.
 
-When your code calls one of the below methods, if an item **does not** exist in the map, a new
+When your code calls one of the "Add" or "AddIf" methods, if an item **does not** exist in the map, a new
 `WindowSubclassController` object is created. If an item **does** exist in the map, then the function
 is added to one of the `WindowSubclassController` internal collections.
-
-- `WindowSubclassManager.Prototype.CommandAdd`
-- `WindowSubclassManager.Prototype.MessageAdd`
-- `WindowSubclassManager.Prototype.NotifyAdd`
 
 The `WindowSubclassController` instance object has the following properties:
 
