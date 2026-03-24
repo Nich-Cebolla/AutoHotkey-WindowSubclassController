@@ -87,10 +87,10 @@ class WindowSubclassManager {
      * associated with `hwndSubclass`. If a {@link WindowSubclassController} object does not exist
      * yet for `hwndSubclass`, a new object is created. References to the
      * {@link WindowSubclassController} objects are cached in a `Map` object set to property
-     * {@link WindowSubclassController.collection}. When a {@link WindowSubclassController} object is
+     * {@link WindowSubclassManager#collection}. When a {@link WindowSubclassController} object is
      * created, the function {@link WindowSubclassController_OnNCDestroy} is added to its
      * "messageCollection" map. {@link WindowSubclassController_OnNCDestroy} deletes the
-     * {@link WindowSubclassController} object from {@link WindowSubclassController.collection} when
+     * {@link WindowSubclassController} object from {@link WindowSubclassManager#collection} when
      * the control / window is destroyed.
      *
      * @param {Integer} hwndSubclass - The handle to the window that is subclassed.
@@ -132,9 +132,10 @@ class WindowSubclassManager {
     /**
      * @desc - Deletes one or all functions associated with `CommandCode`. If there is only one
      * remaining item in each of the {@link WindowSubclassController} object's collections, and if
-     * that item is for {@link WindowSubclassController_OnNCDestroy}, the window subclass
+     * that item is the {@link WindowSubclassController_OnNCDestroy} object that was automatically
+     * added when the {@link WindowSubclassController} object was created, the window subclass
      * is uninstalled and the {@link WindowSubclassController} object is deleted from
-     * {@link WindowSubclassController.collection}.
+     * {@link WindowSubclassManager#collection}.
      *
      * @param {Integer} hwndSubclass - The handle to the window that is subclassed.
      *
@@ -147,6 +148,10 @@ class WindowSubclassManager {
      * - {@link WindowSubclassController#commandCollection}
      * - {@link WindowSubclassController#messageCollection}
      * - {@link WindowSubclassController#notifyCollection}
+     *
+     * @throws {Error} - "The ``WindowSubclassController`` object does not exist in the collection."
+     * This occurs if `hwndSubclass` is not represented in
+     * {@link WindowSubclassManager#collection}.
      */
     CommandDelete(hwndSubclass, CommandCode, Callback?) {
         if subclassController := this.collection.Get(hwndSubclass) {
@@ -214,21 +219,25 @@ class WindowSubclassManager {
     /**
      * @desc - Deletes one or all functions associated with `MessageCode`. If there is only one
      * remaining item in each of the {@link WindowSubclassController} object's collections, and if
-     * that item is for {@link WindowSubclassController_OnNCDestroy}, the window subclass
+     * that item is the {@link WindowSubclassController_OnNCDestroy} object that was automatically
+     * added when the {@link WindowSubclassController} object was created, the window subclass
      * is uninstalled and the {@link WindowSubclassController} object is deleted from
-     * {@link WindowSubclassController.collection}.
      *
      * @param {Integer} hwndSubclass - The handle to the window that is subclassed.
      *
-     * @param {Integer} MessageCode - The message code.
+     * @param {Integer} MessageCode - The WM_MESSAGE value.
      *
      * @param {*} [Callback] - If set, the function to delete. If unset, all of the functions
-     * associated with `CommandCode` are deleted.
+     * associated with `MessageCode` are deleted.
      *
      * @returns {Integer} - Returns the sum of the "Count" properties from each of the collections:
      * - {@link WindowSubclassController#commandCollection}
      * - {@link WindowSubclassController#messageCollection}
      * - {@link WindowSubclassController#notifyCollection}
+     *
+     * @throws {Error} - "The ``WindowSubclassController`` object does not exist in the collection."
+     * This occurs if `hwndSubclass` is not represented in
+     * {@link WindowSubclassManager#collection}.
      */
     MessageDelete(hwndSubclass, MessageCode, Callback?) {
         if subclassController := this.collection.Get(hwndSubclass) {
@@ -297,21 +306,26 @@ class WindowSubclassManager {
     /**
      * @desc - Deletes one or all functions associated with `NotifyCode`. If there is only one
      * remaining item in each of the {@link WindowSubclassController} object's collections, and if
-     * that item is for {@link WindowSubclassController_OnNCDestroy}, the window subclass
+     * that item is the {@link WindowSubclassController_OnNCDestroy} object that was automatically
+     * added when the {@link WindowSubclassController} object was created, the window subclass
      * is uninstalled and the {@link WindowSubclassController} object is deleted from
-     * {@link WindowSubclassController.collection}.
+     * {@link WindowSubclassManager#collection}.
      *
      * @param {Integer} hwndSubclass - The handle to the window that is subclassed.
      *
      * @param {Integer} NotifyCode - The WM_NOTIFY code.
      *
      * @param {*} [Callback] - If set, the function to delete. If unset, all of the functions
-     * associated with `CommandCode` are deleted.
+     * associated with `NotifyCode` are deleted.
      *
      * @returns {Integer} - Returns the sum of the "Count" properties from each of the collections:
      * - {@link WindowSubclassController#commandCollection}
      * - {@link WindowSubclassController#messageCollection}
      * - {@link WindowSubclassController#notifyCollection}
+     *
+     * @throws {Error} - "The ``WindowSubclassController`` object does not exist in the collection."
+     * This occurs if `hwndSubclass` is not represented in
+     * {@link WindowSubclassManager#collection}.
      */
     NotifyDelete(hwndSubclass, NotifyCode, Callback?) {
         if subclassController := this.collection.Get(hwndSubclass) {
