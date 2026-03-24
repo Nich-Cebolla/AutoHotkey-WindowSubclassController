@@ -113,7 +113,7 @@ class WindowSubclassManager {
     CommandAdd(hwndSubclass, CommandCode, Callback, InsertAt?) {
         if !(subclassController := this.collection.Get(hwndSubclass)) {
             this.collection.Set(hwndSubclass, subclassController := WindowSubclassController(hwndSubclass, , this.callbackCreateOptions, this.subclassProc))
-            subclassController.MessageAdd(0x0082, WindowSubclassController_OnNCDestroy) ; WM_NCDESTROY
+            subclassController.MessageAdd(0x0082, WindowSubclassController_OnNCDestroy(this.id)) ; WM_NCDESTROY
         }
         return subclassController.CommandAdd(CommandCode, Callback, InsertAt?)
     }
@@ -199,11 +199,12 @@ class WindowSubclassManager {
         if subclassController := this.collection.Get(hwndSubclass) {
             count := subclassController.CommandDelete(CommandCode, Callback?)
             if count = 1
-            && subclassController.messageCollection.count
             && (callbackCollection := subclassController.messageCollection.Get(0x0082)) ; WM_NCDESTROY
             && callbackCollection.length = 1
-            && callbackCollection[1] = WindowSubclassController_OnNCDestroy {
-                subclassController.Uninstall()
+            && callbackCollection[1].__Class = WindowSubclassController_OnNCDestroy.Prototype.__Class
+            && HasProp(callbackCollection[1], 'idWindowSubclassManager')
+            && callbackCollection[1].idWindowSubclassManager = this.id {
+                subclassController.windowSubclass.Uninstall()
                 this.collection.Delete(hwndSubclass)
             }
             return count
@@ -321,7 +322,7 @@ class WindowSubclassManager {
     MessageAdd(hwndSubclass, MessageCode, Callback, InsertAt?) {
         if !(subclassController := this.collection.Get(hwndSubclass)) {
             this.collection.Set(hwndSubclass, subclassController := WindowSubclassController(hwndSubclass, , this.callbackCreateOptions, this.subclassProc))
-            subclassController.MessageAdd(0x0082, WindowSubclassController_OnNCDestroy) ; WM_NCDESTROY
+            subclassController.MessageAdd(0x0082, WindowSubclassController_OnNCDestroy(this.id)) ; WM_NCDESTROY
         }
         return subclassController.MessageAdd(MessageCode, Callback, InsertAt?)
     }
@@ -385,6 +386,7 @@ class WindowSubclassManager {
      * that item is the {@link WindowSubclassController_OnNCDestroy} object that was automatically
      * added when the {@link WindowSubclassController} object was created, the window subclass
      * is uninstalled and the {@link WindowSubclassController} object is deleted from
+     * {@link WindowSubclassManager#collection}.
      *
      * @param {Integer} hwndSubclass - The handle to the window that is subclassed.
      *
@@ -406,11 +408,12 @@ class WindowSubclassManager {
         if subclassController := this.collection.Get(hwndSubclass) {
             count := subclassController.MessageDelete(MessageCode, Callback?)
             if count = 1
-            && subclassController.messageCollection.count
             && (callbackCollection := subclassController.messageCollection.Get(0x0082)) ; WM_NCDESTROY
             && callbackCollection.length = 1
-            && callbackCollection[1] = WindowSubclassController_OnNCDestroy {
-                subclassController.Uninstall()
+            && callbackCollection[1].__Class = WindowSubclassController_OnNCDestroy.Prototype.__Class
+            && HasProp(callbackCollection[1], 'idWindowSubclassManager')
+            && callbackCollection[1].idWindowSubclassManager = this.id {
+                subclassController.windowSubclass.Uninstall()
                 this.collection.Delete(hwndSubclass)
             }
             return count
@@ -507,7 +510,7 @@ class WindowSubclassManager {
     NotifyAdd(hwndSubclass, NotifyCode, Callback, InsertAt?) {
         if !(subclassController := this.collection.Get(hwndSubclass)) {
             this.collection.Set(hwndSubclass, subclassController := WindowSubclassController(hwndSubclass, , this.callbackCreateOptions, this.subclassProc))
-            subclassController.MessageAdd(0x0082, WindowSubclassController_OnNCDestroy) ; WM_NCDESTROY
+            subclassController.MessageAdd(0x0082, WindowSubclassController_OnNCDestroy(this.id)) ; WM_NCDESTROY
         }
         return subclassController.NotifyAdd(NotifyCode, Callback, InsertAt?)
     }
@@ -593,11 +596,12 @@ class WindowSubclassManager {
         if subclassController := this.collection.Get(hwndSubclass) {
             count := subclassController.NotifyDelete(NotifyCode, Callback?)
             if count = 1
-            && subclassController.messageCollection.count
             && (callbackCollection := subclassController.messageCollection.Get(0x0082)) ; WM_NCDESTROY
             && callbackCollection.length = 1
-            && callbackCollection[1] = WindowSubclassController_OnNCDestroy {
-                subclassController.Uninstall()
+            && callbackCollection[1].__Class = WindowSubclassController_OnNCDestroy.Prototype.__Class
+            && HasProp(callbackCollection[1], 'idWindowSubclassManager')
+            && callbackCollection[1].idWindowSubclassManager = this.id {
+                subclassController.windowSubclass.Uninstall()
                 this.collection.Delete(hwndSubclass)
             }
             return count
@@ -1561,10 +1565,26 @@ WindowSubclassController_SubclassProc(hwndSubclass, uMsg, wParam, lParam, uIdSub
     )
 }
 
-WindowSubclassController_OnNCDestroy(subclassController, *) {
-    WindowSubclassController.collection.Delete(subclassController.windowSubclass.hwndSubclass)
-    subclassController.windowSubclass.Uninstall()
+class WindowSubclassController_OnNCDestroy {
+    /**
+     * @desc - Intended to be used to ensure a subclass is unintalled and deleted from the collection
+     * when a window is deleted. The window message is
+     * {@link https://learn.microsoft.com/en-us/windows/win32/winmsg/wm-ncdestroy WM_NCDESTROY}.
+     *
+     * This event handler is automatically added to every subclass created by calling the "Add" or "AddIf"
+     * {@link WindowSubclassManager} instance methods, so you do not need to use this directly.
+     */
+    __New(idWindowSubclassManager) {
+        this.idWindowSubclassManager := idWindowSubclassManager
+    }
+    Call(subclassController, *) {
+        if subclassManager := WindowSubclassManager.collection.Get(this.idWindowSubclassManager) {
+            subclassManager.DeleteSubclass(subclassController.hwndSubclass)
+        } else {
+            OutputDebug('The ``WindowSubclassManager`` object was already deleted from the collection before the window receieved WM_NCDESTROY.`n')
+        }
+    }
 }
 __WindowSubclassController_ThrowMissingObjectError(hwndSubclass) {
-    throw Error('The ``WindowSubclassController`` object has been deleted from the collection.', , 'hwnd: ' hwndSubclass)
+    throw Error('The ``WindowSubclassController`` object does not exist in the collection.', , hwndSubclass)
 }
