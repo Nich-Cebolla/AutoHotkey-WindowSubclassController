@@ -14,13 +14,9 @@ class WindowSubclassManager {
      * each item key is a window handle (hwnd) and each item value is a {@link WindowSubclassController}
      * object.
      *
-     * When your code calls one of the below methods, if an item **does not** exist in the
+     * When your code calls one of the "Add" or "AddIf" methods, if an item **does not** exist in the
      * {@link WindowSubclassManager#collection} map for the window, a new
      * {@link WindowSubclassController} object is created.
-     *
-     * - {@link WindowSubclassManager.Prototype.CommandAdd}
-     * - {@link WindowSubclassManager.Prototype.MessageAdd}
-     * - {@link WindowSubclassManager.Prototype.NotifyAdd}
      *
      * If an item **does** exist in the {@link WindowSubclassManager#collection} map, then the function
      * is added to the {@link WindowSubclassController} internal collections.
@@ -48,20 +44,12 @@ class WindowSubclassManager {
      * @param {*} [subclassProc = WindowSubclassController_SubclassProc] - The value that is passed
      * to the `subclassProc` parameter of
      * {@link WindowSubclassController.Prototype.__New} whenever a new
-     * {@link WindowSubclassController} object is created by calling one of:
-     *
-     * - {@link WindowSubclassManager.Prototype.CommandAdd}
-     * - {@link WindowSubclassManager.Prototype.MessageAdd}
-     * - {@link WindowSubclassManager.Prototype.NotifyAdd}
+     * {@link WindowSubclassController} object is created by calling one the "Add" or "AddIf" methods.
      *
      * @param {String} [callbackCreateOptions = ""] - The value that is passed to the
      * `callbackCreateOptions` parameter of
      * {@link WindowSubclassController.Prototype.__New} whenever a new
-     * {@link WindowSubclassController} object is created by calling one of:
-     *
-     * - {@link WindowSubclassManager.Prototype.CommandAdd}
-     * - {@link WindowSubclassManager.Prototype.MessageAdd}
-     * - {@link WindowSubclassManager.Prototype.NotifyAdd}
+     * {@link WindowSubclassController} object is created by calling one the "Add" or "AddIf" methods.
      */
     __New(subclassProc := WindowSubclassController_SubclassProc, callbackCreateOptions := '') {
         loop 10000 {
@@ -130,6 +118,60 @@ class WindowSubclassManager {
         return subclassController.CommandAdd(CommandCode, Callback, InsertAt?)
     }
     /**
+     * @desc - Adds a function to be called when the specified WM_COMMAND is sent to the window
+     * associated with `hwndSubclass`, but only if the function does not already exist in the
+     * {@link WindowSubclassController} object's collection.
+     *
+     * If a {@link WindowSubclassController} object does not exist
+     * yet for `hwndSubclass`, a new object is created. References to the
+     * {@link WindowSubclassController} objects are cached in a `Map` object set to property
+     * {@link WindowSubclassManager#collection}. When a {@link WindowSubclassController} object is
+     * created, the function {@link WindowSubclassController_OnNCDestroy} is added to its
+     * "messageCollection" map. {@link WindowSubclassController_OnNCDestroy} deletes the
+     * {@link WindowSubclassController} object from {@link WindowSubclassManager#collection} when
+     * the control / window is destroyed.
+     *
+     * @param {Integer} hwndSubclass - The handle to the window that is subclassed.
+     *
+     * @param {Integer} CommandCode - The WM_COMMAND code.
+     *
+     * @param {*} Callback - A `Func` or callable object to call.
+     *
+     * Parameters:
+     * 1. **{WindowSubclassController}** - This {@link WindowSubclassController} object
+     * 2. **{Integer}** - hwndSubclass
+     * 3. **{Integer}** - uMsg
+     * 4. **{Integer}** - wParam
+     * 5. **{Integer}** - lParam
+     * 6. **{Integer}** - uIdSubclass
+     * 7. **{VarRef}** - The value to return to the system.
+     *
+     * Regarding the last parameter: If your function needs to return a value to the system, it must
+     * set the last parameter with the value that is to be returned and also the function must return
+     * a nonzero value to the caller.
+     *
+     * If the function returns zero or an empty string, the process continues and the next function
+     * is called. If the function returns a nonzero value, the value of the last parameter is returned
+     * to the system and no further functions are called.
+     *
+     * @param {Boolean} [First = false] - If true, and if `Callback` does not already exist in the
+     * collection, `Callback` is added and will be the first function called. If false, and if
+     * `Callback` does not already exist in the collection, `Callback` is added and will be the last
+     * function called.
+     *
+     * @returns {Integer} - If `Callback` was added to the collection, the index at which it was
+     * added. Else, returns `0`.
+     */
+    CommandAddIf(hwndSubclass, CommandCode, Callback, First := false) {
+        if subclassController := this.collection.Get(hwndSubclass) {
+            return subclassController.CommandAddIf(CommandCode, Callback, First)
+        } else {
+            this.collection.Set(hwndSubclass, subclassController := WindowSubclassController(hwndSubclass, , this.callbackCreateOptions, this.subclassProc))
+            subclassController.MessageAdd(0x0082, WindowSubclassController_OnNCDestroy(this.id)) ; WM_NCDESTROY
+            return subclassController.CommandAdd(CommandCode, Callback)
+        }
+    }
+    /**
      * @desc - Deletes one or all functions associated with `CommandCode`. If there is only one
      * remaining item in each of the {@link WindowSubclassController} object's collections, and if
      * that item is the {@link WindowSubclassController_OnNCDestroy} object that was automatically
@@ -167,6 +209,73 @@ class WindowSubclassManager {
             return count
         } else {
             __WindowSubclassController_ThrowMissingObjectError(hwndSubclass)
+        }
+    }
+    /**
+     * @desc - Checks if `Callback` exists in the collection of functions that are called
+     * when the specified WM_COMMAND code is sent to the window associated with `hwndSubclass`. If
+     * it does, deletes `Callback` from the collection. If it does not, this method returns without
+     * changing anything.
+     *
+     * If there is only one remaining item in each of the {@link WindowSubclassController} object's
+     * collections, and if that item is the {@link WindowSubclassController_OnNCDestroy} object that
+     * was automatically added when the {@link WindowSubclassController} object was created, the
+     * window subclass is uninstalled and the {@link WindowSubclassController} object is deleted from
+     * {@link WindowSubclassManager#collection}.
+     *
+     * @param {Integer} hwndSubclass - The handle to the window that is subclassed.
+     *
+     * @param {Integer} CommandCode - The WM_COMMAND code.
+     *
+     * @param {*} Callback - The function to delete.
+     *
+     * @param {VarRef} [OutCount] - If set, a variable that will receive the sum of the "Count"
+     * properties from each of the collections:
+     *
+     * - {@link WindowSubclassController#commandCollection}
+     * - {@link WindowSubclassController#messageCollection}
+     * - {@link WindowSubclassController#notifyCollection}
+     *
+     * @returns {Integer} - If `Callback` was deleted, returns `1`. Else, `0`.
+     */
+    CommandDeleteIf(hwndSubclass, CommandCode, Callback, &OutCount?) {
+        if subclassController := this.collection.Get(hwndSubclass) {
+            if subclassController.CommandDeleteIf(CommandCode, Callback, &OutCount) {
+                if IsSet(OutCount)
+                && OutCount = 1
+                && (callbackCollection := subclassController.messageCollection.Get(0x0082)) ; WM_NCDESTROY
+                && callbackCollection.length = 1
+                && callbackCollection[1].__Class = WindowSubclassController_OnNCDestroy.Prototype.__Class
+                && HasProp(callbackCollection[1], 'idWindowSubclassManager')
+                && callbackCollection[1].idWindowSubclassManager = this.id {
+                    subclassController.windowSubclass.Uninstall()
+                    this.collection.Delete(hwndSubclass)
+                }
+                return 1
+            }
+        }
+        return 0
+    }
+    /**
+     * @desc - Deletes the {@link WindowSubclassController} object from the collection.
+     *
+     * @param {Integer} hwndSubclass - The handle to the window the was subclassed. If `hwndSubclass`
+     * does exist in this object's collection, the subclass is uninstalled, the item is deleted from
+     * the collection, and this method returns `0`.
+     *
+     * If `hwndSubclass` does **not** exist in this object's collection, this method returns `1`
+     * without making any changes.
+     *
+     * @returns {Integer} - If `hwndSubclass` was successfully deleted from the collection, returns `0`.
+     * Else, returns `1`.
+     */
+    DeleteSubclass(hwndSubclass) {
+        if subclassController := this.collection.Get(hwndSubclass) {
+            subclassController.windowSubclass.Uninstall()
+            this.collection.Delete(hwndSubclass)
+            return 0
+        } else {
+            return 1
         }
     }
     /**
@@ -217,6 +326,60 @@ class WindowSubclassManager {
         return subclassController.MessageAdd(MessageCode, Callback, InsertAt?)
     }
     /**
+     * @desc - Adds a function to be called when the specified WM_MESSAGE is sent to the window
+     * associated with `hwndSubclass`, but only if the function does not already exist in the
+     * {@link WindowSubclassController} object's collection.
+     *
+     * If a {@link WindowSubclassController} object does not exist
+     * yet for `hwndSubclass`, a new object is created. References to the
+     * {@link WindowSubclassController} objects are cached in a `Map` object set to property
+     * {@link WindowSubclassManager#collection}. When a {@link WindowSubclassController} object is
+     * created, the function {@link WindowSubclassController_OnNCDestroy} is added to its
+     * "messageCollection" map. {@link WindowSubclassController_OnNCDestroy} deletes the
+     * {@link WindowSubclassController} object from {@link WindowSubclassManager#collection} when
+     * the control / window is destroyed.
+     *
+     * @param {Integer} hwndSubclass - The handle to the window that is subclassed.
+     *
+     * @param {Integer} MessageCode - The WM_MESSAGE value.
+     *
+     * @param {*} Callback - A `Func` or callable object to call.
+     *
+     * Parameters:
+     * 1. **{WindowSubclassController}** - This {@link WindowSubclassController} object
+     * 2. **{Integer}** - hwndSubclass
+     * 3. **{Integer}** - uMsg
+     * 4. **{Integer}** - wParam
+     * 5. **{Integer}** - lParam
+     * 6. **{Integer}** - uIdSubclass
+     * 7. **{VarRef}** - The value to return to the system.
+     *
+     * Regarding the last parameter: If your function needs to return a value to the system, it must
+     * set the last parameter with the value that is to be returned and also the function must return
+     * a nonzero value to the caller.
+     *
+     * If the function returns zero or an empty string, the process continues and the next function
+     * is called. If the function returns a nonzero value, the value of the last parameter is returned
+     * to the system and no further functions are called.
+     *
+     * @param {Boolean} [First = false] - If true, and if `Callback` does not already exist in the
+     * collection, `Callback` is added and will be the first function called. If false, and if
+     * `Callback` does not already exist in the collection, `Callback` is added and will be the last
+     * function called.
+     *
+     * @returns {Integer} - If `Callback` was added to the collection, the index at which it was
+     * added. Else, returns `0`.
+     */
+    MessageAddIf(hwndSubclass, MessageCode, Callback, First := false) {
+        if subclassController := this.collection.Get(hwndSubclass) {
+            return subclassController.MessageAddIf(MessageCode, Callback, First)
+        } else {
+            this.collection.Set(hwndSubclass, subclassController := WindowSubclassController(hwndSubclass, , this.callbackCreateOptions, this.subclassProc))
+            subclassController.MessageAdd(0x0082, WindowSubclassController_OnNCDestroy(this.id)) ; WM_NCDESTROY
+            return subclassController.MessageAdd(MessageCode, Callback)
+        }
+    }
+    /**
      * @desc - Deletes one or all functions associated with `MessageCode`. If there is only one
      * remaining item in each of the {@link WindowSubclassController} object's collections, and if
      * that item is the {@link WindowSubclassController_OnNCDestroy} object that was automatically
@@ -254,6 +417,51 @@ class WindowSubclassManager {
         } else {
             __WindowSubclassController_ThrowMissingObjectError(hwndSubclass)
         }
+    }
+    /**
+     * @desc - Checks if `Callback` exists in the collection of functions that are called
+     * when the specified WM_Message code is sent to the window associated with `hwndSubclass`. If
+     * it does, deletes `Callback` from the collection. If it does not, this method returns without
+     * changing anything.
+     *
+     * If there is only one remaining item in each of the {@link WindowSubclassController} object's
+     * collections, and if that item is the {@link WindowSubclassController_OnNCDestroy} object that
+     * was automatically added when the {@link WindowSubclassController} object was created, the
+     * window subclass is uninstalled and the {@link WindowSubclassController} object is deleted from
+     * {@link WindowSubclassManager#collection}.
+     *
+     * @param {Integer} hwndSubclass - The handle to the window that is subclassed.
+     *
+     * @param {Integer} MessageCode - The WM_MESSAGE value.
+     *
+     * @param {*} Callback - The function to delete.
+     *
+     * @param {VarRef} [OutCount] - If set, a variable that will receive the sum of the "Count"
+     * properties from each of the collections:
+     *
+     * - {@link WindowSubclassController#MessageCollection}
+     * - {@link WindowSubclassController#messageCollection}
+     * - {@link WindowSubclassController#notifyCollection}
+     *
+     * @returns {Integer} - If `Callback` was deleted, returns `1`. Else, `0`.
+     */
+    MessageDeleteIf(hwndSubclass, MessageCode, Callback, &OutCount?) {
+        if subclassController := this.collection.Get(hwndSubclass) {
+            if subclassController.MessageDeleteIf(MessageCode, Callback, &OutCount) {
+                if IsSet(OutCount)
+                && OutCount = 1
+                && (callbackCollection := subclassController.messageCollection.Get(0x0082)) ; WM_NCDESTROY
+                && callbackCollection.length = 1
+                && callbackCollection[1].__Class = WindowSubclassController_OnNCDestroy.Prototype.__Class
+                && HasProp(callbackCollection[1], 'idWindowSubclassManager')
+                && callbackCollection[1].idWindowSubclassManager = this.id {
+                    subclassController.windowSubclass.Uninstall()
+                    this.collection.Delete(hwndSubclass)
+                }
+                return 1
+            }
+        }
+        return 0
     }
     /**
      * @desc - Adds a function to be called when the specified WM_NOTIFY code is sent to the window
@@ -304,6 +512,60 @@ class WindowSubclassManager {
         return subclassController.NotifyAdd(NotifyCode, Callback, InsertAt?)
     }
     /**
+     * @desc - Adds a function to be called when the specified WM_NOTIFY is sent to the window
+     * associated with `hwndSubclass`, but only if the function does not already exist in the
+     * {@link WindowSubclassController} object's collection.
+     *
+     * If a {@link WindowSubclassController} object does not exist
+     * yet for `hwndSubclass`, a new object is created. References to the
+     * {@link WindowSubclassController} objects are cached in a `Map` object set to property
+     * {@link WindowSubclassManager#collection}. When a {@link WindowSubclassController} object is
+     * created, the function {@link WindowSubclassController_OnNCDestroy} is added to its
+     * "messageCollection" map. {@link WindowSubclassController_OnNCDestroy} deletes the
+     * {@link WindowSubclassController} object from {@link WindowSubclassManager#collection} when
+     * the control / window is destroyed.
+     *
+     * @param {Integer} hwndSubclass - The handle to the window that is subclassed.
+     *
+     * @param {Integer} NotifyCode - The WM_NOTIFY code.
+     *
+     * @param {*} Callback - A `Func` or callable object to call.
+     *
+     * Parameters:
+     * 1. **{WindowSubclassController}** - This {@link WindowSubclassController} object
+     * 2. **{Integer}** - hwndSubclass
+     * 3. **{Integer}** - uMsg
+     * 4. **{Integer}** - wParam
+     * 5. **{Integer}** - lParam
+     * 6. **{Integer}** - uIdSubclass
+     * 7. **{VarRef}** - The value to return to the system.
+     *
+     * Regarding the last parameter: If your function needs to return a value to the system, it must
+     * set the last parameter with the value that is to be returned and also the function must return
+     * a nonzero value to the caller.
+     *
+     * If the function returns zero or an empty string, the process continues and the next function
+     * is called. If the function returns a nonzero value, the value of the last parameter is returned
+     * to the system and no further functions are called.
+     *
+     * @param {Boolean} [First = false] - If true, and if `Callback` does not already exist in the
+     * collection, `Callback` is added and will be the first function called. If false, and if
+     * `Callback` does not already exist in the collection, `Callback` is added and will be the last
+     * function called.
+     *
+     * @returns {Integer} - If `Callback` was added to the collection, the index at which it was
+     * added. Else, returns `0`.
+     */
+    NotifyAddIf(hwndSubclass, NotifyCode, Callback, First := false) {
+        if subclassController := this.collection.Get(hwndSubclass) {
+            return subclassController.NotifyAddIf(NotifyCode, Callback, First)
+        } else {
+            this.collection.Set(hwndSubclass, subclassController := WindowSubclassController(hwndSubclass, , this.callbackCreateOptions, this.subclassProc))
+            subclassController.MessageAdd(0x0082, WindowSubclassController_OnNCDestroy(this.id)) ; WM_NCDESTROY
+            return subclassController.NotifyAdd(NotifyCode, Callback)
+        }
+    }
+    /**
      * @desc - Deletes one or all functions associated with `NotifyCode`. If there is only one
      * remaining item in each of the {@link WindowSubclassController} object's collections, and if
      * that item is the {@link WindowSubclassController_OnNCDestroy} object that was automatically
@@ -344,13 +606,54 @@ class WindowSubclassManager {
         }
     }
     /**
+     * @desc - Checks if `Callback` exists in the collection of functions that are called
+     * when the specified WM_Notify code is sent to the window associated with `hwndSubclass`. If
+     * it does, deletes `Callback` from the collection. If it does not, this method returns without
+     * changing anything.
+     *
+     * If there is only one remaining item in each of the {@link WindowSubclassController} object's
+     * collections, and if that item is the {@link WindowSubclassController_OnNCDestroy} object that
+     * was automatically added when the {@link WindowSubclassController} object was created, the
+     * window subclass is uninstalled and the {@link WindowSubclassController} object is deleted from
+     * {@link WindowSubclassManager#collection}.
+     *
+     * @param {Integer} hwndSubclass - The handle to the window that is subclassed.
+     *
+     * @param {Integer} NotifyCode - The WM_NOTIFY code.
+     *
+     * @param {*} Callback - The function to delete.
+     *
+     * @param {VarRef} [OutCount] - If set, a variable that will receive the sum of the "Count"
+     * properties from each of the collections:
+     *
+     * - {@link WindowSubclassController#NotifyCollection}
+     * - {@link WindowSubclassController#messageCollection}
+     * - {@link WindowSubclassController#notifyCollection}
+     *
+     * @returns {Integer} - If `Callback` was deleted, returns `1`. Else, `0`.
+     */
+    NotifyDeleteIf(hwndSubclass, NotifyCode, Callback, &OutCount?) {
+        if subclassController := this.collection.Get(hwndSubclass) {
+            if subclassController.NotifyDeleteIf(NotifyCode, Callback, &OutCount) {
+                if IsSet(OutCount)
+                && OutCount = 1
+                && (callbackCollection := subclassController.messageCollection.Get(0x0082)) ; WM_NCDESTROY
+                && callbackCollection.length = 1
+                && callbackCollection[1].__Class = WindowSubclassController_OnNCDestroy.Prototype.__Class
+                && HasProp(callbackCollection[1], 'idWindowSubclassManager')
+                && callbackCollection[1].idWindowSubclassManager = this.id {
+                    subclassController.windowSubclass.Uninstall()
+                    this.collection.Delete(hwndSubclass)
+                }
+                return 1
+            }
+        }
+        return 0
+    }
+    /**
      * @desc - Sets the value that is passed to the `callbackCreateOptions` parameter of
      * {@link WindowSubclassController.Prototype.__New} whenever a new
-     * {@link WindowSubclassController} object is created by calling one of:
-     *
-     * - {@link WindowSubclassManager.Prototype.CommandAdd}
-     * - {@link WindowSubclassManager.Prototype.MessageAdd}
-     * - {@link WindowSubclassManager.Prototype.NotifyAdd}
+     * {@link WindowSubclassController} object is created by calling one of the "Add" or "AddIf" methods.
      *
      * @param {String} value - The value.
      */
@@ -378,11 +681,7 @@ class WindowSubclassManager {
     /**
      * @desc - Sets the value that is passed to the `subclassProc` parameter of
      * {@link WindowSubclassController.Prototype.__New} whenever a new
-     * {@link WindowSubclassController} object is created by calling one of:
-     *
-     * - {@link WindowSubclassManager.Prototype.CommandAdd}
-     * - {@link WindowSubclassManager.Prototype.MessageAdd}
-     * - {@link WindowSubclassManager.Prototype.NotifyAdd}
+     * {@link WindowSubclassController} object is created by calling one the "Add" or "AddIf" methods.
      *
      * @param {*} subclassProc - The function.
      */
@@ -559,6 +858,43 @@ class WindowSubclassController {
         return this.__Add('Command', CommandCode, Callback, InsertAt ?? unset)
     }
     /**
+     * @desc - Checks if `Callback` already exists in the collection of functions that are called
+     * when the specified WM_COMMAND code is sent. If it does, this method does not change anything.
+     * If it does not, `Callback` is added to the collection.
+     *
+     * @param {Integer} CommandCode - The WM_COMMAND code.
+     *
+     * @param {*} Callback - A `Func` or callable object to call.
+     *
+     * Parameters:
+     * 1. **{WindowSubclassController}** - This {@link WindowSubclassController} object
+     * 2. **{Integer}** - hwndSubclass
+     * 3. **{Integer}** - uMsg
+     * 4. **{Integer}** - wParam
+     * 5. **{Integer}** - lParam
+     * 6. **{Integer}** - uIdSubclass
+     * 7. **{VarRef}** - The value to return to the system.
+     *
+     * Regarding the last parameter: If your function needs to return a value to the system, it must
+     * set the last parameter with the value that is to be returned and also the function must return
+     * a nonzero value to the caller.
+     *
+     * If the function returns zero or an empty string, the process continues and the next function
+     * is called. If the function returns a nonzero value, the value of the last parameter is returned
+     * to the system and no further functions are called.
+     *
+     * @param {Boolean} [First = false] - If true, and if `Callback` does not already exist in the
+     * collection, `Callback` is added and will be the first function called. If false, and if
+     * `Callback` does not already exist in the collection, `Callback` is added and will be the last
+     * function called.
+     *
+     * @returns {Integer} - If `Callback` was added to the collection, the index at which it was
+     * added. Else, returns `0`.
+     */
+    CommandAddIf(CommandCode, Callback, First := false) {
+        return this.__AddIf('Command', CommandCode, Callback, First)
+    }
+    /**
      * @desc - Deletes one or all functions associated with `CommandCode`. If there are no remaining
      * callbacks in any of the containers, the window subclass is uninstalled. The winow subclass
      * will be reinstalled automatically the next time a callback is added to one of the containers.
@@ -575,6 +911,27 @@ class WindowSubclassController {
      */
     CommandDelete(CommandCode, Callback?) {
         return this.__DeleteCallback('Command', CommandCode, Callback ?? unset)
+    }
+    /**
+     * @desc - Checks if `Callback` exists in the collection of functions that are called
+     * when the specified WM_COMMAND code is sent. If it does, deletes `Callback` from the collection.
+     * If it does not, this method returns without changing anything.
+     *
+     * @param {Integer} CommandCode - The WM_COMMAND code.
+     *
+     * @param {*} Callback - The function to delete.
+     *
+     * @param {VarRef} [OutCount] - If set, a variable that will receive the sum of the "Count"
+     * properties from each of the collections:
+     *
+     * - {@link WindowSubclassController#commandCollection}
+     * - {@link WindowSubclassController#messageCollection}
+     * - {@link WindowSubclassController#notifyCollection}
+     *
+     * @returns {Integer} - If `Callback` was deleted, returns `1`. Else, `0`.
+     */
+    CommandDeleteIf(CommandCode, Callback, &OutCount?) {
+        return this.__DeleteIf('Command', CommandCode, Callback, &OutCount?)
     }
     /**
      * @param {Integer} Code - The code.
@@ -644,6 +1001,43 @@ class WindowSubclassController {
         return this.__Add('Message', MessageCode, Callback, InsertAt ?? unset)
     }
     /**
+     * @desc - Checks if `Callback` already exists in the collection of functions that are called
+     * when the specified WM_MESSAGE is sent. If it does, this method does not change anything.
+     * If it does not, `Callback` is added to the collection.
+     *
+     * @param {Integer} MessageCode - The WM_MESSAGE value.
+     *
+     * @param {*} Callback - A `Func` or callable object to call.
+     *
+     * Parameters:
+     * 1. **{WindowSubclassController}** - This {@link WindowSubclassController} object
+     * 2. **{Integer}** - hwndSubclass
+     * 3. **{Integer}** - uMsg
+     * 4. **{Integer}** - wParam
+     * 5. **{Integer}** - lParam
+     * 6. **{Integer}** - uIdSubclass
+     * 7. **{VarRef}** - The value to return to the system.
+     *
+     * Regarding the last parameter: If your function needs to return a value to the system, it must
+     * set the last parameter with the value that is to be returned and also the function must return
+     * a nonzero value to the caller.
+     *
+     * If the function returns zero or an empty string, the process continues and the next function
+     * is called. If the function returns a nonzero value, the value of the last parameter is returned
+     * to the system and no further functions are called.
+     *
+     * @param {Boolean} [First = false] - If true, and if `Callback` does not already exist in the
+     * collection, `Callback` is added and will be the first function called. If false, and if
+     * `Callback` does not already exist in the collection, `Callback` is added and will be the last
+     * function called.
+     *
+     * @returns {Integer} - If `Callback` was added to the collection, the index at which it was
+     * added. Else, returns `0`.
+     */
+    MessageAddIf(MessageCode, Callback, First := false) {
+        return this.__AddIf('Message', MessageCode, Callback, First)
+    }
+    /**
      * @desc - Deletes one or all functions associated with `MessageCode`. If there are no remaining
      * callbacks in any of the containers, the window subclass is uninstalled. The winow subclass
      * will be reinstalled automatically the next time a callback is added to one of the containers.
@@ -660,6 +1054,27 @@ class WindowSubclassController {
      */
     MessageDelete(MessageCode, Callback?) {
         return this.__DeleteCallback('Message', MessageCode, Callback ?? unset)
+    }
+    /**
+     * @desc - Checks if `Callback` exists in the collection of functions that are called
+     * when the specified WM_MESSAGE is sent. If it does, deletes `Callback` from the collection.
+     * If it does not, this method returns without changing anything.
+     *
+     * @param {Integer} MessageCode - The WM_MESSAGE value.
+     *
+     * @param {*} Callback - The function to delete.
+     *
+     * @param {VarRef} [OutCount] - If set, a variable that will receive the sum of the "Count"
+     * properties from each of the collections:
+     *
+     * - {@link WindowSubclassController#MessageCollection}
+     * - {@link WindowSubclassController#messageCollection}
+     * - {@link WindowSubclassController#notifyCollection}
+     *
+     * @returns {Integer} - If `Callback` was deleted, returns `1`. Else, `0`.
+     */
+    MessageDeleteIf(MessageCode, Callback, &OutCount?) {
+        return this.__DeleteIf('Message', MessageCode, Callback, &OutCount?)
     }
     /**
      * @param {Integer} Code - The code.
@@ -705,6 +1120,43 @@ class WindowSubclassController {
         return this.__Add('Notify', NotifyCode, Callback, InsertAt ?? unset)
     }
     /**
+     * @desc - Checks if `Callback` already exists in the collection of functions that are called
+     * when the specified WM_NOTIFY code is sent. If it does, this method does not change anything.
+     * If it does not, `Callback` is added to the collection.
+     *
+     * @param {Integer} NotifyCode - The WM_NOTIFY code.
+     *
+     * @param {*} Callback - A `Func` or callable object to call.
+     *
+     * Parameters:
+     * 1. **{WindowSubclassController}** - This {@link WindowSubclassController} object
+     * 2. **{Integer}** - hwndSubclass
+     * 3. **{Integer}** - uMsg
+     * 4. **{Integer}** - wParam
+     * 5. **{Integer}** - lParam
+     * 6. **{Integer}** - uIdSubclass
+     * 7. **{VarRef}** - The value to return to the system.
+     *
+     * Regarding the last parameter: If your function needs to return a value to the system, it must
+     * set the last parameter with the value that is to be returned and also the function must return
+     * a nonzero value to the caller.
+     *
+     * If the function returns zero or an empty string, the process continues and the next function
+     * is called. If the function returns a nonzero value, the value of the last parameter is returned
+     * to the system and no further functions are called.
+     *
+     * @param {Boolean} [First = false] - If true, and if `Callback` does not already exist in the
+     * collection, `Callback` is added and will be the first function called. If false, and if
+     * `Callback` does not already exist in the collection, `Callback` is added and will be the last
+     * function called.
+     *
+     * @returns {Integer} - If `Callback` was added to the collection, the index at which it was
+     * added. Else, returns `0`.
+     */
+    NotifyAddIf(NotifyCode, Callback, First := false) {
+        return this.__AddIf('Notify', NotifyCode, Callback, First)
+    }
+    /**
      * @desc - Deletes one or all functions associated with `NotifyCode`. If there are no remaining
      * callbacks in any of the containers, the window subclass is uninstalled. The winow subclass
      * will be reinstalled automatically the next time a callback is added to one of the containers.
@@ -721,6 +1173,27 @@ class WindowSubclassController {
      */
     NotifyDelete(NotifyCode, Callback?) {
         return this.__DeleteCallback('Notify', NotifyCode, Callback ?? unset)
+    }
+    /**
+     * @desc - Checks if `Callback` exists in the collection of functions that are called
+     * when the specified WM_NOTIFY code is sent. If it does, deletes `Callback` from the collection.
+     * If it does not, this method returns without changing anything.
+     *
+     * @param {Integer} NotifyCode - The WM_NOTIFY code.
+     *
+     * @param {*} Callback - The function to delete.
+     *
+     * @param {VarRef} [OutCount] - If set, a variable that will receive the sum of the "Count"
+     * properties from each of the collections:
+     *
+     * - {@link WindowSubclassController#NotifyCollection}
+     * - {@link WindowSubclassController#messageCollection}
+     * - {@link WindowSubclassController#notifyCollection}
+     *
+     * @returns {Integer} - If `Callback` was deleted, returns `1`. Else, `0`.
+     */
+    NotifyDeleteIf(NotifyCode, Callback, &OutCount?) {
+        return this.__DeleteIf('Notify', NotifyCode, Callback, &OutCount?)
     }
     /**
      * @param {Integer} Code - The code.
@@ -764,6 +1237,28 @@ class WindowSubclassController {
             return callbackCollection.Length
         }
     }
+    __AddIf(name, Code, Callback, first) {
+        collection := this.%name%Collection
+        if callbackCollection := collection.Get(code) {
+            for cb in callbackCollection {
+                if cb = Callback {
+                    return 0
+                }
+            }
+            if first {
+                callbackCollection.InsertAt(1, Callback)
+                return 1
+            } else {
+                callbackCollection.Push(Callback)
+                return callbackCollection.length
+            }
+        } else {
+            callbackCollection := WindowSubclass_CallbackCollection(Code)
+            collection.Set(Code, callbackCollection)
+            callbackCollection.Push(Callback)
+            return 1
+        }
+    }
     __DeleteCallback(Name, Code, Callback?) {
         collection := this.%Name%Collection
         if IsSet(Callback) {
@@ -783,6 +1278,25 @@ class WindowSubclassController {
             this.windowSubclass.Uninstall()
         }
         return count
+    }
+    __DeleteIf(name, Code, Callback, &OutCount?) {
+        collection := this.%name%Collection
+        if callbackCollection := collection.Get(code) {
+            for cb in callbackCollection {
+                if cb = Callback {
+                    callbackCollection.RemoveAt(A_Index)
+                    if !callbackCollection.length {
+                        collection.Delete(Code)
+                    }
+                    OutCount := this.commandCollection.count + this.messageCollection.count + this.notifyCollection.count
+                    if !OutCount {
+                        this.windowSubclass.Uninstall()
+                    }
+                    return 1
+                }
+            }
+        }
+        return 0
     }
     __Delete() {
         if this.windowSubclass {
