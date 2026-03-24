@@ -1324,6 +1324,9 @@ class WindowSubclassController {
             CallbackFree(this.pfnSubclass)
         }
     }
+
+    hwndSubclass => this.windowSubclass.hwndSubclass
+    uIdSubclass => this.windowSubclass.uIdSubclass
 }
 
 class WindowSubclass {
