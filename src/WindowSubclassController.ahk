@@ -1,5 +1,10 @@
 ﻿
 class WindowSubclassManager {
+    static __New() {
+        this.DeleteProp('__New')
+        this.collection := Map()
+        this.collection.Default := ''
+    }
     /**
      * @desc - The {@link WindowSubclassManager} class object can be used to implement event handlers
      * for any window created by the AHK process. Creating a window subclass allows your code to
@@ -59,6 +64,18 @@ class WindowSubclassManager {
      * - {@link WindowSubclassManager.Prototype.NotifyAdd}
      */
     __New(subclassProc := WindowSubclassController_SubclassProc, callbackCreateOptions := '') {
+        loop 10000 {
+            id := Random(1, 4294967295)
+            if !WindowSubclassManager.collection.Has(id) {
+                this.id := id
+                WindowSubclassManager.collection.Set(id, this)
+                ObjRelease(ObjPtr(this))
+                break
+            }
+        }
+        if !this.HasOwnProp('id') {
+            throw Error('Failed to produce a unique id.')
+        }
         this.collection := Map()
         this.collection.default := ''
         this.callbackCreateOptions := ''
