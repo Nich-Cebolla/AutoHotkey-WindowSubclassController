@@ -692,6 +692,12 @@ class WindowSubclassManager {
     SetSubclassProc(subclassProc) {
         this.subclassProc := subclassProc
     }
+    __Delete() {
+        ObjPtrAddRef(this)
+        if WindowSubclassManager.collection.Has(this.id) {
+            WindowSubclassManager.collection.Delete(this.id)
+        }
+    }
 }
 
 class WindowSubclassController {
