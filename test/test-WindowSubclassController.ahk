@@ -1,4 +1,5 @@
 
+#Requires AutoHotkey >=2.0-a
 #include ..\src\WindowSubclassController.ahk
 #SingleInstance force
 
