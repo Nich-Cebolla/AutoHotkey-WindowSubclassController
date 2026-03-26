@@ -1594,6 +1594,7 @@ class WindowSubclassController_OnNCDestroy {
         }
     }
 }
+
 __WindowSubclassController_ThrowMissingObjectError(hwndSubclass) {
     throw Error('The ``WindowSubclassController`` object does not exist in the collection.', , hwndSubclass)
 }
