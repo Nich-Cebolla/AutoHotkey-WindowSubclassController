@@ -198,12 +198,13 @@ class WindowSubclassManager {
     CommandDelete(hwndSubclass, CommandCode, Callback?) {
         if subclassController := this.collection.Get(hwndSubclass) {
             count := subclassController.CommandDelete(CommandCode, Callback?)
-            if count = 1
+            if !count
+            || (count = 1
             && (callbackCollection := subclassController.messageCollection.Get(0x0082)) ; WM_NCDESTROY
             && callbackCollection.length = 1
             && callbackCollection[1].__Class = WindowSubclassController_OnNCDestroy.Prototype.__Class
             && HasProp(callbackCollection[1], 'idWindowSubclassManager')
-            && callbackCollection[1].idWindowSubclassManager = this.id {
+            && callbackCollection[1].idWindowSubclassManager = this.id) {
                 subclassController.windowSubclass.Uninstall()
                 this.collection.Delete(hwndSubclass)
             }
@@ -242,13 +243,13 @@ class WindowSubclassManager {
     CommandDeleteIf(hwndSubclass, CommandCode, Callback, &OutCount?) {
         if subclassController := this.collection.Get(hwndSubclass) {
             if subclassController.CommandDeleteIf(CommandCode, Callback, &OutCount) {
-                if IsSet(OutCount)
-                && OutCount = 1
+                if !OutCount
+                || (OutCount = 1
                 && (callbackCollection := subclassController.messageCollection.Get(0x0082)) ; WM_NCDESTROY
                 && callbackCollection.length = 1
                 && callbackCollection[1].__Class = WindowSubclassController_OnNCDestroy.Prototype.__Class
                 && HasProp(callbackCollection[1], 'idWindowSubclassManager')
-                && callbackCollection[1].idWindowSubclassManager = this.id {
+                && callbackCollection[1].idWindowSubclassManager = this.id) {
                     subclassController.windowSubclass.Uninstall()
                     this.collection.Delete(hwndSubclass)
                 }
@@ -407,12 +408,13 @@ class WindowSubclassManager {
     MessageDelete(hwndSubclass, MessageCode, Callback?) {
         if subclassController := this.collection.Get(hwndSubclass) {
             count := subclassController.MessageDelete(MessageCode, Callback?)
-            if count = 1
+            if !count
+            || (count = 1
             && (callbackCollection := subclassController.messageCollection.Get(0x0082)) ; WM_NCDESTROY
             && callbackCollection.length = 1
             && callbackCollection[1].__Class = WindowSubclassController_OnNCDestroy.Prototype.__Class
             && HasProp(callbackCollection[1], 'idWindowSubclassManager')
-            && callbackCollection[1].idWindowSubclassManager = this.id {
+            && callbackCollection[1].idWindowSubclassManager = this.id) {
                 subclassController.windowSubclass.Uninstall()
                 this.collection.Delete(hwndSubclass)
             }
@@ -451,13 +453,13 @@ class WindowSubclassManager {
     MessageDeleteIf(hwndSubclass, MessageCode, Callback, &OutCount?) {
         if subclassController := this.collection.Get(hwndSubclass) {
             if subclassController.MessageDeleteIf(MessageCode, Callback, &OutCount) {
-                if IsSet(OutCount)
-                && OutCount = 1
+                if !OutCount
+                || (OutCount = 1
                 && (callbackCollection := subclassController.messageCollection.Get(0x0082)) ; WM_NCDESTROY
                 && callbackCollection.length = 1
                 && callbackCollection[1].__Class = WindowSubclassController_OnNCDestroy.Prototype.__Class
                 && HasProp(callbackCollection[1], 'idWindowSubclassManager')
-                && callbackCollection[1].idWindowSubclassManager = this.id {
+                && callbackCollection[1].idWindowSubclassManager = this.id) {
                     subclassController.windowSubclass.Uninstall()
                     this.collection.Delete(hwndSubclass)
                 }
@@ -595,12 +597,13 @@ class WindowSubclassManager {
     NotifyDelete(hwndSubclass, NotifyCode, Callback?) {
         if subclassController := this.collection.Get(hwndSubclass) {
             count := subclassController.NotifyDelete(NotifyCode, Callback?)
-            if count = 1
+            if !count
+            || (count = 1
             && (callbackCollection := subclassController.messageCollection.Get(0x0082)) ; WM_NCDESTROY
             && callbackCollection.length = 1
             && callbackCollection[1].__Class = WindowSubclassController_OnNCDestroy.Prototype.__Class
             && HasProp(callbackCollection[1], 'idWindowSubclassManager')
-            && callbackCollection[1].idWindowSubclassManager = this.id {
+            && callbackCollection[1].idWindowSubclassManager = this.id) {
                 subclassController.windowSubclass.Uninstall()
                 this.collection.Delete(hwndSubclass)
             }
@@ -639,13 +642,13 @@ class WindowSubclassManager {
     NotifyDeleteIf(hwndSubclass, NotifyCode, Callback, &OutCount?) {
         if subclassController := this.collection.Get(hwndSubclass) {
             if subclassController.NotifyDeleteIf(NotifyCode, Callback, &OutCount) {
-                if IsSet(OutCount)
-                && OutCount = 1
-                && (callbackCollection := subclassController.messageCollection.Get(0x0082)) ; WM_NCDESTROY
+                if !OutCount
+                || (OutCount = 1
+                &&(callbackCollection := subclassController.messageCollection.Get(0x0082)) ; WM_NCDESTROY
                 && callbackCollection.length = 1
                 && callbackCollection[1].__Class = WindowSubclassController_OnNCDestroy.Prototype.__Class
                 && HasProp(callbackCollection[1], 'idWindowSubclassManager')
-                && callbackCollection[1].idWindowSubclassManager = this.id {
+                && callbackCollection[1].idWindowSubclassManager = this.id) {
                     subclassController.windowSubclass.Uninstall()
                     this.collection.Delete(hwndSubclass)
                 }
